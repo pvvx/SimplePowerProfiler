@@ -1,0 +1,5 @@
+sdk_add_subdirectory_ifdef(CONFIG_CHERRYUSB cherryusb)
+sdk_add_subdirectory_ifdef(CONFIG_BFLOG bflog)
+sdk_add_subdirectory_ifdef(CONFIG_BLUETOOTH bluetooth)
+sdk_add_subdirectory_ifdef(CONFIG_XZ xz)
+add_subdirectory(utils)
