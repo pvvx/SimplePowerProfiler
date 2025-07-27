@@ -1,6 +1,6 @@
 object frmMain: TfrmMain
-  Left = 766
-  Top = 845
+  Left = 706
+  Top = 1266
   Width = 1141
   Height = 648
   Color = clBtnFace

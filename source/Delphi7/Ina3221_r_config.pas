@@ -311,7 +311,20 @@ begin
      blk_cfg.init[0].reg_addr := 0;
      blk_cfg.init[0].data := ina_reg.config;
      // записать другие регистры ?:
-     blk_cfg.init[1].dev_addr := 0;
+     blk_cfg.init[1].dev_addr := INA2XX_I2C_ADDR;
+     blk_cfg.init[1].reg_addr := $10; // Power-Valid Upper-Limit Register (address = 10h) [reset = 2710h]
+     blk_cfg.init[1].data := 3250; // mV
+
+     blk_cfg.init[2].dev_addr := INA2XX_I2C_ADDR;
+     blk_cfg.init[2].reg_addr := $11; // Power-Valid Lower-Limit Register (address = 11h) [reset = 2328h]
+     blk_cfg.init[2].data := 3200; // mV
+
+     // записать другие регистры ?:
+     blk_cfg.init[3].dev_addr := INA2XX_I2C_ADDR;
+     blk_cfg.init[3].reg_addr := $0F; // Mask/Enable Register (address = 0Fh) [reset = 0002h]
+     blk_cfg.init[3].data := $7000;
+
+//     blk_cfg.init[3].dev_addr := 0;
 
      // min 140, max 8244*1024 = 8441856 us
      u := (ina_reg.config and BusCTimeMsk) shr BusCTimeShl;

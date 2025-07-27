@@ -13,7 +13,8 @@ const
     INA2XX_I2C_ADDR = $80;
     I2C_DEVICE_ID = $16;
     ADC1_DEVICE_ID = $21;
-    ADC2_DEVICE_ID = $22;
+    ADC2_DEVICE_ID = $22;  // BL702
+    ADC3_DEVICE_ID = $23;
     HI_DEVICE_TYPE = $10;
 
     INAxxx_MID_REG = $fe;
@@ -24,14 +25,16 @@ const
     INA219_DID = $0001;
     INA226_DID = $6022;
     INA3221_DID = $2032;
+    INA228_DID = $8122;
 
     INA219_MAX_R = 5;
     INA226_MAX_R = 7;
     INA3221_MAX_R = 18;
+    INA228_MAX_R = 4;
 
     SMBus_Speed_kHz = 1000; // default
 
-    SMP_BUF_CNT = $3fff;
+    SMP_BUF_CNT = $3ffff;
     MAX_BLK_DEV1 = 30;
     MAX_BLK_DEV2 = 100;
     MAX_BLK_CNT = 116*2;
@@ -652,6 +655,9 @@ begin
       INA3221_DID : begin
         ina_max_regs := INA3221_MAX_R;
       end;
+      INA228_DID : begin
+        ina_max_regs := INA228_MAX_R;
+      end;
       else begin
         ina_max_regs := INA3221_MAX_R;
       end;
@@ -1164,16 +1170,16 @@ procedure TfrmMain.ShowLabelsMX;
 begin
         if ((ChartEnables and 2) <> 0)  and (SamplesCount <> 0) then begin
             OldsI := SumI/SamplesCount;
-            LabelMXI.Caption := 'I:' + FormatFloat('# ##0.000000', OldsI);
+            LabelMXI.Caption := 'I:' + FormatFloat('# ##0.000 000', OldsI);
         end
         else
-            LabelMXI.Caption := 'I#' + FormatFloat('# ##0.000000', OldCurI);
+            LabelMXI.Caption := 'I#' + FormatFloat('# ##0.000 000', OldCurI);
         if ((ChartEnables and 1) <> 0) and (SamplesCount <> 0) then begin
             OldsU := SumU/SamplesCount;
-            LabelMXU.Caption := 'U:' + FormatFloat('# ##0.000000', SumU/SamplesCount);
+            LabelMXU.Caption := 'U:' + FormatFloat('# ##0.000 000', SumU/SamplesCount);
         end
         else
-            LabelMXU.Caption := 'U#' + FormatFloat('# ##0.000000', OldCurU);
+            LabelMXU.Caption := 'U#' + FormatFloat('# ##0.000 000', OldCurU);
 end;
 
 procedure TfrmMain.ShowSmps;
@@ -1263,7 +1269,8 @@ begin
           CloseCom;
           if (dev_id <> I2C_DEVICE_ID) and
              (dev_id <> ADC1_DEVICE_ID) and
-             (dev_id <> ADC2_DEVICE_ID) then begin
+             (dev_id <> ADC2_DEVICE_ID) and
+             (dev_id <> ADC3_DEVICE_ID) then begin
             ShowMessage('Error device ID!'+#13#10+'Com closed.');
             StatusBar.Panels[2].Text:='Не тот ID у устройства на '+ sComNane+'!';
           end else begin
@@ -1289,11 +1296,18 @@ begin
               exit;
             end;
           end;
-          if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then begin
+          if (dev_id = ADC1_DEVICE_ID)
+          or (dev_id = ADC2_DEVICE_ID)
+          or (dev_id = ADC3_DEVICE_ID) then begin
               ButtonStartADC.Enabled := True;
               ButtonStartADC.Visible := True;
               ButtonADCcfg.Enabled := True;
               ButtonADCcfg.Visible := True;
+          end else begin
+              ButtonStartADC.Enabled := False;
+              ButtonStartADC.Visible := False;
+              ButtonADCcfg.Enabled := False;
+              ButtonADCcfg.Visible := False;
           end;
 //            StatusBar.Panels[2].Text:=sComNane+' открыт.';
           purge_com := 1;
@@ -1311,7 +1325,9 @@ begin
           end;
           case dev_i2c_id of
             INA219_DID : begin
-              if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then
+              if (dev_id = ADC1_DEVICE_ID) 
+              or (dev_id = ADC2_DEVICE_ID) 
+              or (dev_id = ADC3_DEVICE_ID) then
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA219 + ADC)'
               else
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA219)';
@@ -1319,7 +1335,9 @@ begin
               Form219Config.GetParams;
             end;
             INA226_DID : begin
-              if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then
+              if (dev_id = ADC1_DEVICE_ID) 
+              or (dev_id = ADC2_DEVICE_ID) 
+              or (dev_id = ADC3_DEVICE_ID) then
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA226 + ADC)'
               else
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA226)';
@@ -1330,19 +1348,30 @@ begin
                 ShowAllRegs;
             end;
             INA3221_DID : begin
-              if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then
+              if (dev_id = ADC1_DEVICE_ID) 
+              or (dev_id = ADC2_DEVICE_ID) 
+              or (dev_id = ADC3_DEVICE_ID) then
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA3221 + ADC)'
               else
                 Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA3221)';
               Form3221Config.ShowAll;
               Form3221Config.GetParams;
             end;
+            INA228_DID : begin
+              if (dev_id = ADC3_DEVICE_ID) then begin
+                Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA228 + ADC)';
+                FormAdc2Config.GetParams;
+              end
+              else
+               Caption := Application.Title + ' ver ' + BuildInfoString + ' (INA228)';
+            end;
             else begin
                 if (dev_id = ADC1_DEVICE_ID) then begin
                   Caption := Application.Title + ' ver ' + BuildInfoString + ' (ADC)';
                   FormAdcConfig.GetParams;
                 end else
-                if (dev_id = ADC2_DEVICE_ID) then begin
+                if (dev_id = ADC2_DEVICE_ID) 
+                or (dev_id = ADC3_DEVICE_ID) then begin
                   Caption := Application.Title + ' ver ' + BuildInfoString + ' (ADC BL702)';
                   FormAdc2Config.GetParams;
                 end else
@@ -1430,8 +1459,8 @@ end;
 
 procedure TfrmMain.ButtonStartClick(Sender: TObject);
 var
-t : dword;
-k : double;
+t, maxs : dword;
+//k : double;
 begin
     SamplesEna := False;
     Timer1.Enabled := False;
@@ -1444,10 +1473,11 @@ begin
         SetParStart;
         t := blk_cfg.time_us shl blk_cfg.multiplier; // t us
         if t <> 0 then begin
-          k := 1000.0/t; // smp per ms
-          if (k*MaxSamples) > 1000000.0 then
-            MaxSamples := Round(1000000.0/k);
-          EditSizeGrf.Text := IntToStr(MaxSamples);
+          maxs := 3000*t; // ms
+          if MaxSamples > maxs then begin
+            MaxSamples := maxs; // ms
+            EditSizeGrf.Text := IntToStr(MaxSamples); // ms
+          end;
         end;
         ShowSmps;
         if SamplesAutoStop then begin
@@ -1474,7 +1504,8 @@ begin
         if not SetAdcIniCfg(0)then
           exit;
       end;
-      if (dev_id = ADC2_DEVICE_ID) then begin
+      if (dev_id = ADC2_DEVICE_ID)
+      or (dev_id = ADC3_DEVICE_ID) then begin
         if not SetAdc2IniCfg(0)then
           exit;
       end;
@@ -1595,7 +1626,10 @@ begin
         dev_id := bufrx[0];
         dev_ver := bufrx[2] or (bufrx[3] shl 8);
         StatusBar.Panels[2].Text:='Устройство ID:' + IntToHex(dev_type, 2) + '-' + IntToHex(dev_id, 2) +' версии '+IntToStr((dev_ver shr 12) and $0f) +'.'+IntToStr((dev_ver shr 8) and $0f)+'.'+IntToStr((dev_ver shr 4) and $0f)+'.'+IntToStr(dev_ver and $0f)+' подключено на '+ sComNane +'.';
-        if (dev_id = I2C_DEVICE_ID) or (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID)  then begin
+        if (dev_id = I2C_DEVICE_ID) 
+        or (dev_id = ADC1_DEVICE_ID) 
+        or (dev_id = ADC2_DEVICE_ID)
+        or (dev_id = ADC3_DEVICE_ID) then begin
           if not StopReadDevice then begin
               StatusBar.Panels[2].Text:=StatusBar.Panels[2].Text + ' Ошибка в команде останова!';
               ResetIna2xx;
@@ -1614,7 +1648,11 @@ begin
                   INA3221_DID : begin
                     StatusBar.Panels[2].Text:=StatusBar.Panels[2].Text + ' Найдена INA3221.';
                     dev_i2c_id := INA3221_DID;
-                  end
+                  end;
+                  INA228_DID : begin
+                    StatusBar.Panels[2].Text:=StatusBar.Panels[2].Text + ' Найдена INA228.';
+                    dev_i2c_id := INA228_DID;
+                  end;
                   else
                     dev_i2c_id := INA219_DID;
                 end;
@@ -1625,7 +1663,9 @@ begin
               result := True;
               exit;
           end else
-            if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then begin
+	        if (dev_id = ADC1_DEVICE_ID) 
+    	    or (dev_id = ADC2_DEVICE_ID)
+        	or (dev_id = ADC3_DEVICE_ID) then begin
               dev_i2c_id := NO_I2C_DID;
               result := True;
               exit;
@@ -2073,9 +2113,10 @@ begin
 
         if not DeviceTypeRecognized then exit;
         if work_adc then begin
-		      if (dev_id = ADC1_DEVICE_ID) then
+	      if (dev_id = ADC1_DEVICE_ID) then
             FormAdcConfig.GetParams;
-    		  if (dev_id = ADC2_DEVICE_ID) then
+   		  if (dev_id = ADC2_DEVICE_ID)
+   		  or (dev_id = ADC3_DEVICE_ID) then
             FormAdc2Config.GetParams;
           exit;
         end;
@@ -2242,8 +2283,7 @@ end;
 
 procedure TfrmMain.ButtonStartADCClick(Sender: TObject);
 var
-t : dword;
-k : double;
+t, maxs: dword;
 begin
     SamplesEna := False;
     Timer1.Enabled := False;
@@ -2251,7 +2291,8 @@ begin
     if (dev_id = ADC1_DEVICE_ID) then begin
     	if not SetAdcIniCfg(1) then exit;
     end;
-    if (dev_id = ADC2_DEVICE_ID) then begin
+    if (dev_id = ADC2_DEVICE_ID) 
+    or (dev_id = ADC3_DEVICE_ID) then begin
     	if not SetAdc2IniCfg(1) then exit;
     end;
     ConnectStartTime := GetTime;
@@ -2271,10 +2312,11 @@ begin
     end;
     t := blk_cfg.time_us shl blk_cfg.multiplier; // t us
     if t <> 0 then begin
-      k := 1000.0/t; // smp per ms
-      if (k*MaxSamples) > 1000000.0 then
-        MaxSamples := Round(1000000.0/k);
-      EditSizeGrf.Text := IntToStr(MaxSamples);
+      maxs := 3000*t; // ms
+      if MaxSamples > maxs then begin
+         MaxSamples := maxs; // ms
+         EditSizeGrf.Text := IntToStr(MaxSamples); // ms
+      end;
     end;
     ShowSmps;
     if SamplesAutoStop then begin

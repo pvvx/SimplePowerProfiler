@@ -303,7 +303,10 @@ begin
             end;
      end;
      if(mode <> 0) then begin
-       if (dev_id = ADC1_DEVICE_ID) or (dev_id = ADC2_DEVICE_ID) then begin
+       if (dev_id = ADC1_DEVICE_ID) 
+       or (dev_id = ADC2_DEVICE_ID) 
+       or (dev_id = ADC3_DEVICE_ID) 
+       then begin
          // задать максимум регистров в пакете
          x := t div (30000 div MAX_BLK_DEV2);
          if(x > (MAX_BLK_DEV2-1)) then x := (MAX_BLK_DEV2-12);

@@ -1,10 +1,25 @@
 # SimplePowerProfiler
-Simple PowerProfiler on INA219/226/3221...
+Simple PowerProfiler on INA219, INA226, INA231, INA3221
 
-Проект в процессе разработки...
-
-Использование RV-Debugger-BL702
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/SPP-INA3221.png)
 
-Варианты использования [модулей с TLSR8266, STM32F103](https://github.com/pvvx/UBIA/tree/master/PowerProfiler)
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/STM32INA219.gif)
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/STM32INA226.gif)
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/JDY-10-INA219.gif)
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/JDY-10-INA226.gif)
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/CH583_CH592.gif)
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/PowerProfiler.gif)
+
+[Source code](https://github.com/pvvx/SimplePowerProfiler/tree/main/source)
+
+[Source code for TLSR8266](https://github.com/pvvx/UBIA)
+
+[Готовые прошивки и программа](https://github.com/pvvx/SimplePowerProfiler/tree/main/bin)
+
+[Форум](https://esp8266.ru/forum/threads/power-profiler.4643)
