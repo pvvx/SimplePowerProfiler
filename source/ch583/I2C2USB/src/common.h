@@ -10,10 +10,6 @@
 
 #include "CH58x_common.h"
 
-#define bl702dk 10
-#define bl702zb 11
-#define bl702rd 12
-
 #define USE_I2C_DEV   1
 #define USE_USB_CDC   1
 #define USE_ADC_DEV   0 // TODO
@@ -36,6 +32,7 @@
 #define DEBUG_USB       0 // =DEBUG debug print usb
 #define DEBUG_I2C       0 // =DEBUG debug print i2c
 
-
+#define InitSysTickCnt() { SysTick->CTLR = 5; }   // one tick FREQ_SYS
+#define GetSysTickCnt()  ((uint32_t)SysTick->CNT) // one tick FREQ_SYS
 
 #endif /* SRC_COMMON_H_ */

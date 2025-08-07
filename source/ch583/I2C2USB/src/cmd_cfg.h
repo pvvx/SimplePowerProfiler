@@ -154,6 +154,7 @@ typedef struct __attribute__((packed)) _dev_i2c_cfg_t {
 	reg_wr_t init[MAX_INIT_REGS];
 	reg_rd_t rd[MAX_READ_REGS];
 	reg_wr_t slp[2];
+	uint16_t crc;
 } dev_i2c_cfg_t; // [38] 6 + 4*4 + 2*4 + 4*2
 
 extern dev_i2c_cfg_t cfg_i2c; // store in eep

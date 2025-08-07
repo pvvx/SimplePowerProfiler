@@ -10,7 +10,7 @@
 
 uint32_t i2c_wait_status(uint32_t mask) {
   uint32_t ret = -1; // timeout
-  uint32_t tt = (uint32_t)SysTick->CNT;
+  uint32_t tt = GetSysTickCnt(); // (uint32_t)SysTick->CNT;
   while(1) {
     ret = R16_I2C_STAR1;
     if(ret & mask) {
@@ -23,7 +23,7 @@ uint32_t i2c_wait_status(uint32_t mask) {
       }
       break;
     }
-    if((uint32_t)SysTick->CNT - tt > FREQ_SYS/10000) {// 100 us
+    if(GetSysTickCnt() - tt > FREQ_SYS/10000) {// 100 us
       ret = -1;
       I2CBusInit();
 //      i2c_printf("I2C: Error timeout\n");
@@ -66,7 +66,6 @@ int I2CBusWriteWord(unsigned char i2c_addr, unsigned char reg_addr, unsigned sho
 int I2CBusReadWord(unsigned char i2c_addr, unsigned char reg_addr, void *preg_data)
 {
   int ret = -1;
-  uint32_t tt = SYS_GetSysTickCnt();
   uint8_t * pbuf = preg_data;
   if((R16_I2C_CTRL1 & RB_I2C_PE) == 0) return ret; // i2c off
   R16_I2C_CTRL1 &= ~RB_I2C_STOP;

@@ -233,11 +233,9 @@ int main()
 #ifdef GPIO_TEST
   GPIOB_ModeCfg(GPIO_TEST, GPIO_ModeOut_PP_5mA);
 #endif
-  SysTick->CTLR = 5;
-#ifdef I2C_DEV_POWER
-  i2c_printf("I2C: Power Off\r\n");
-  GPIOB_ResetBits(I2C_DEV_POWER);
-  GPIOB_ModeCfg(I2C_DEV_POWER | I2C_DEV_SCL | I2C_DEV_SDA, GPIO_ModeIN_Floating);
+  InitSysTickCnt();
+#if USE_I2C_DEV
+  I2CDevInit();
 #endif
   app_usb_init();
 
@@ -277,7 +275,7 @@ int main()
       }
       app_cmd_len = 0;
     };
-    Task_I2C();
+    I2CDevTask();
     USBSendData();
 #else
 #if USE_TEST_ADC

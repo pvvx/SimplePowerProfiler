@@ -6,12 +6,12 @@
  */
 
 #include "common.h"
-
 #if (USE_I2C_DEV)
 #include "app_drv_fifo.h"
 #include "app_usb.h"
 #include "cmd_cfg.h"
 #include "i2c_dev.h"
+#include "crc16.h"
 
 extern volatile uint32_t all_read_count;
 extern volatile uint32_t all_overflow_cnt; // overflow
@@ -29,40 +29,42 @@ typedef struct __attribute__((packed)) _i2c_blk_t{
 i2c_blk_t i2c_blk;
 
 
-// I2C DEV config (store EEP_ID_I2C_CFG)
-dev_i2c_cfg_t cfg_i2c  = {
-		.pktcnt = 0, // max = SMPS_BLK_CNT;
-		.multiplier = 0,
-		.time = 10000, // us
-		.clk_khz = 1000,
-		.init[0].dev_addr = 0x80,
-		.init[0].reg_addr = 0x0,
-		.init[1].data = 0xc005,
-		.init[1].dev_addr = 0x80,
-		.init[1].reg_addr = 0x00,
-		.init[1].data = 0xc005,
-		.init[2].dev_addr = 0x80,
-		.init[2].reg_addr = 0x00,
-		.init[2].data = 0x4005,
-		.init[3].dev_addr = 0x00,
-		.init[3].reg_addr = 0x00,
-		.init[3].data = 0x0000,
-		.rd[0].dev_addr = 0x81,
-		.rd[0].reg_addr = 0x01,
-		.rd[1].dev_addr = 0x81,
-		.rd[1].reg_addr = 0x02,
-		.rd[2].dev_addr = 0x00,
-		.rd[2].reg_addr = 0x00,
-		.rd[3].dev_addr = 0x00,
-		.rd[3].reg_addr = 0x00,
-		.slp[0].dev_addr = 0x80,
-		.slp[0].reg_addr = 0x00,
-		.slp[0].data = 0x0000,
-		.slp[1].dev_addr = 0x00,
-		.slp[1].reg_addr = 0x00,
-		.slp[1].data = 0x0000
+const dev_i2c_cfg_t def_cfg_i2c  = {
+    .pktcnt = 0, // max = SMPS_BLK_CNT;
+    .multiplier = 0, // * 16
+    .time = 10000, // 10 ms
+    .clk_khz = 1000, // 1 MHz
+    .init[0].dev_addr = 0x80,
+    .init[0].reg_addr = 0x0,
+    .init[1].data = 0xc005,
+    .init[1].dev_addr = 0x80,
+    .init[1].reg_addr = 0x00,
+    .init[1].data = 0xc005,
+    .init[2].dev_addr = 0x80,
+    .init[2].reg_addr = 0x00,
+    .init[2].data = 0x4005,
+    .init[3].dev_addr = 0x00,
+    .init[3].reg_addr = 0x00,
+    .init[3].data = 0x0000,
+    .rd[0].dev_addr = 0x81,
+    .rd[0].reg_addr = 0x01,
+    .rd[1].dev_addr = 0x81,
+    .rd[1].reg_addr = 0x02,
+    .rd[2].dev_addr = 0x00,
+    .rd[2].reg_addr = 0x00,
+    .rd[3].dev_addr = 0x00,
+    .rd[3].reg_addr = 0x00,
+    .slp[0].dev_addr = 0x80,
+    .slp[0].reg_addr = 0x00,
+    .slp[0].data = 0x0000,
+    .slp[1].dev_addr = 0x00,
+    .slp[1].reg_addr = 0x00,
+    .slp[1].data = 0x0000
 };
 
+
+// I2C DEV config (store EEP_ID_I2C_CFG)
+dev_i2c_cfg_t cfg_i2c;
 /*********************************************************************
  * @fn      TMR0_IRQHandler
  *
@@ -93,27 +95,27 @@ void TMR1_IRQHandler(void) {
 }
 
 /* Flush I2C Buffer */
-void FlushI2CBuf(void) {
+void I2CDevFlushBuf(void) {
   i2c_printf("Flush I2C Buffer\n");
   i2c_dev.raddr = &cfg_i2c.rd[0]; //	rd_next_cnt = 0;
   i2c_dev.i2c_buf_wr = 0;
   i2c_dev.i2c_buf_rd = 0;
 }
 /* Read Timer (IRQ) Stop */
-void Timer_Stop(void) {
+void I2CDevTimerStop(void) {
   i2c_printf("I2C: Timer Stop\r\n");
   i2c_dev.timer_flg = 0;
   R8_TMR1_CTRL_MOD = 0;
 }
 
-void Timer_Start(void) {
+void I2CDevTimerStart(void) {
   i2c_printf("I2C: Timer Start\r\n");
   R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR;
   R8_TMR1_CTRL_MOD = RB_TMR_COUNT_EN;
 }
 
 /* Timer Init (IRQ)*/
-void Timer_Init(uint32_t period_us) {
+void I2CDevTimerInit(uint32_t period_us) {
   i2c_printf("I2C: Timer %i us\r\n", period_us);
 
   R32_TMR1_CNT_END = (FREQ_SYS/1000000)*period_us;
@@ -129,7 +131,7 @@ void Timer_Init(uint32_t period_us) {
 /* I2C Device go Sleep */
 void I2CDevSleep(void) {
 	cfg_i2c.pktcnt = 0;
-	Timer_Stop();
+	I2CDevTimerStop();
 	if(cfg_i2c.slp[0].dev_addr) {
 	  i2c_printf("I2C: Set CLK %i kHz, stretch %u\n", cfg_i2c.clk_khz & 0x7fff, cfg_i2c.clk_khz >> 15);
 		I2CBusInit();
@@ -161,11 +163,51 @@ void I2CDevWakeUp(void) {
     DelayMs(2);
 #endif
     cfg_i2c.pktcnt = 0;
-    InitI2CDevice();
+    I2CDevStart();
 }
 
-/* Init I2C Device */
-int InitI2CDevice(void) {
+int I2CDevReadSetings(void) {
+  int ret = 1;
+  if(FLASH_EEPROM_CMD(CMD_EEPROM_READ, 0, &cfg_i2c, sizeof(cfg_i2c))
+   || crc16(0xffff, &cfg_i2c, sizeof(cfg_i2c))) {
+    PRINT("I2C: Set default CFG\n");
+    memcpy(&cfg_i2c, &def_cfg_i2c, sizeof(cfg_i2c)-2);
+  } else
+    ret = 0; // ok
+  return ret;
+}
+
+int I2CDevWriteSetings(void) {
+  dev_i2c_cfg_t tst_blk;
+  int ret = 1;
+  cfg_i2c.crc = crc16(0xffff, &cfg_i2c, sizeof(cfg_i2c)-2);
+  if(FLASH_EEPROM_CMD(CMD_EEPROM_READ, 0, &tst_blk, sizeof(tst_blk)) == 0
+   && memcmp(&tst_blk, &cfg_i2c, sizeof(cfg_i2c)) == 0) {
+    ret = 0; // already - ok
+  } else {
+    if(FLASH_EEPROM_CMD(CMD_EEPROM_ERASE, 0, NULL, EEPROM_PAGE_SIZE)
+     || FLASH_EEPROM_CMD(CMD_EEPROM_WRITE, 0, &cfg_i2c, sizeof(cfg_i2c))) {
+      PRINT("I2C: Error write CFG\n");
+    } else {
+      i2c_printf("I2C: Write CFG - ok\r\n");
+      ret = 0; // ok
+    }
+  }
+  return ret;
+}
+
+/* I2C Device Init */
+void I2CDevInit(void) {
+    I2CDevReadSetings();
+#ifdef I2C_DEV_POWER
+    i2c_printf("I2C: Power Off\r\n");
+    GPIOB_ResetBits(I2C_DEV_POWER);
+    GPIOB_ModeCfg(I2C_DEV_POWER | I2C_DEV_SCL | I2C_DEV_SDA, GPIO_ModeIN_Floating);
+#endif
+}
+
+/* I2C Device Start */
+int I2CDevStart(void) {
 	uint32_t i;
 	uint32_t clk_khz;
 	uint32_t t_rd_us;
@@ -183,25 +225,25 @@ int InitI2CDevice(void) {
 	t_rd_us = cfg_i2c.time << cfg_i2c.multiplier;
 	if(t_rd_us < (7*10*1000)/clk_khz) { // 2*5w*10bit*1000000/clk = us
 		cfg_i2c.pktcnt = 0;
-		Timer_Stop();
+		I2CDevTimerStop();
 		PRINT("I2C: Error timing - step read: %i us, i2c clk: %i kHz!\r\n", t_rd_us, clk_khz);
 		return 0; // error t_us
 	}
-	FlushI2CBuf();
+	I2CDevFlushBuf();
 	if (cfg_i2c.pktcnt) {
-		Timer_Init(t_rd_us);
+	  I2CDevTimerInit(t_rd_us);
 		// start (new) counts
 		all_read_count = 0;
 		all_overflow_cnt = 0;
 	} else {
-		Timer_Stop();
+	    I2CDevTimerStop();
 		// выход по Stop (cfg_i2c.rd_count = 0), init dev i2c only
 	}
 	for(i = 0; i < MAX_INIT_REGS && cfg_i2c.init[i].dev_addr; i++) {
 	  DelayUs(200);
 		if (I2CBusWriteWord(cfg_i2c.init[i].dev_addr, cfg_i2c.init[i].reg_addr, cfg_i2c.init[i].data)) {
 			cfg_i2c.pktcnt = 0;
-			Timer_Stop();
+			I2CDevTimerStop();
 			PRINT("I2C: Error write addr: %02x:%02x, data: %04x!\r\n", cfg_i2c.init[i].dev_addr, cfg_i2c.init[i].reg_addr, cfg_i2c.init[i].data);
 			// return 0; // error dev i2c
 		}
@@ -210,7 +252,7 @@ int InitI2CDevice(void) {
 		i2c_printf("I2C: blk %i word\r\n", cfg_i2c.pktcnt);
 		if(i2c_dev.raddr->dev_addr) {
 		  i2c_dev.timer_flg = 1;
-			Timer_Start(); // Enable timer
+		  I2CDevTimerStart(); // Enable timer
 		} else {
 		  PRINT("I2C: Set read I2C addr!\r\n");
 			return 0;
@@ -220,7 +262,7 @@ int InitI2CDevice(void) {
 }
 
 
-void Task_I2C(void) {
+void I2CDevTask(void) {
 	uint32_t prd = i2c_dev.i2c_buf_rd;
 	uint32_t pwr = i2c_dev.i2c_buf_wr;
 	uint32_t size;

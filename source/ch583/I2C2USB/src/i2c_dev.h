@@ -38,22 +38,27 @@ extern i2c_dev_t i2c_dev;
 extern blk_tx_pkt_t send_pkt; // буфер подготовки пакета к отправке в Fifo USB
 
 /* Flush I2C Buffer */
-void FlushI2CBuf(void);
+void I2CDevFlushBuf(void);
 /* Timer Stop */
-void Timer_Stop(void);
+void I2CDevTimerStop(void);
 /* Timer Start */
-void Timer_Start(void);
+void I2CDevTimerStart(void);
 /* Timer Init (IRQ)*/
-void Timer_Init(uint32_t period_us);
+void I2CDevTimerInit(uint32_t period_us);
 /* I2C Device go Sleep */
 void I2CDevSleep();
 /* I2C Device WakeUp */
 void I2CDevWakeUp();
 /* Init I2C Device */
-int InitI2CDevice(void);
+void I2CDevInit(void);
+/* Start I2C Device */
+int I2CDevStart(void);
+
+int I2CDevWriteSetings(void);
+int I2CDevReadSetings(void);
 
 /* Task I2C Device */
-void Task_I2C(void);
+void I2CDevTask(void);
 
 #if DEBUG_I2C
 #define i2c_printf(X...) printf(X)

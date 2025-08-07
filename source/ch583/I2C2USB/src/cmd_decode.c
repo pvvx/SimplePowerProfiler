@@ -10,7 +10,7 @@
 #include "i2c_dev.h"
 
 #define INT_DEV_ID	0x1016  // DevID = 0x1026
-#define INT_DEV_VER 0x0005  // Ver 1.2.3.4 = 0x1234
+#define INT_DEV_VER 0x0006  // Ver 1.2.3.4 = 0x1234
 
 // status
 volatile uint32_t all_read_count;
@@ -54,15 +54,15 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 					}
 #endif // USE_ADC_DEV
 					memcpy(&cfg_i2c, &pbufi->data.ci2c,
-							(pbufi->head.size > sizeof(cfg_i2c))? sizeof(cfg_i2c) : pbufi->head.size);
-					if (!InitI2CDevice()) {
+							(pbufi->head.size > sizeof(cfg_i2c)-2)? sizeof(cfg_i2c)-2 : pbufi->head.size);
+					if (!I2CDevStart()) {
 						pbufo->head.cmd |= CMD_ERR_FLG; // Error cmd
 						txlen = 0 + sizeof(blk_head_t);
 						break;
 					}
 				}
-				memcpy(&pbufo->data, &cfg_i2c, sizeof(cfg_i2c));
-				txlen = sizeof(cfg_i2c) + sizeof(blk_head_t);
+				memcpy(&pbufo->data, &cfg_i2c, sizeof(cfg_i2c)-2);
+				txlen = sizeof(cfg_i2c)-2 + sizeof(blk_head_t);
 				break;
 			case CMD_DEV_SCF: // Store CFG/ini in Flash
 				if(pbufi->head.size < sizeof(dev_scf_t)) {
@@ -71,15 +71,16 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 					break;
 				}
 				pbufo->data.ud[0] = 0;
-#if 0
 #if	(USE_I2C_DEV)
-				if(pbufi->data.scf.i2c)
-					pbufo->data.scf.i2c = flash_write_cfg(&cfg_i2c, EEP_ID_I2C_CFG, sizeof(cfg_i2c));
+				if(pbufi->data.scf.i2c) {
+					//pbufo->data.scf.i2c = flash_write_cfg(&cfg_i2c, EEP_ID_I2C_CFG, sizeof(cfg_i2c));
+				  if(I2CDevWriteSetings() == 0)
+				    pbufo->data.scf.i2c = 1;
+				}
 #endif
 #if	(USE_ADC_DEV)
 				if(pbufi->data.scf.adc)
 					pbufo->data.scf.adc = flash_write_cfg(&cfg_adc, EEP_ID_ADC_CFG, sizeof(cfg_adc));
-#endif
 #endif
 				txlen = sizeof(dev_scf_t) + sizeof(blk_head_t);
 				break;
