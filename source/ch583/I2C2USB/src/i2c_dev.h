@@ -25,12 +25,28 @@ extern dev_i2c_cfg_t cfg_i2c;
 #error "I2C_BUF_SIZE: Only 256 word!"
 #endif
 
+#define MIN_I2C_CLK_KHZ 100 // 100 kHz
+#define MAX_I2C_CLK_KHZ 2000 // 2.0 MHz
+#define DEF_I2C_CLK_KHZ 1500 // 1.5 MHz
+
+typedef struct {
+    volatile uint32_t all_read_count;
+    volatile uint32_t all_overflow_cnt; // счетчик overflow
+} status_sps_t;
+
+extern status_sps_t status;
+
 typedef struct {
     reg_rd_t * raddr;               // указатель на адреса для чтения регистров в cfg_i2c
-    volatile int timer_flg;         // flag временного отключения чтения I2C regs по irq
-    volatile uint8_t i2c_buf_wr;    // указатель записи в буфере i2c_buf
+    volatile uint8_t timer_flg;     // flag временного отключения чтения I2C regs по irq
     volatile uint8_t i2c_buf_rd;    // указатель чтения в буфере i2c_buf
+    volatile uint8_t i2c_buf_wr;    // указатель записи в буфере i2c_buf
+#if USE_I2C_24BIT
+    uint8_t i2c_rd_24bit;           // флаг работы с 24 битами
+    uint32_t i2c_buf[I2C_BUF_SIZE]; // буфер приема по таймеру с i2с, 1024 bytes
+#else
     uint16_t i2c_buf[I2C_BUF_SIZE]; // буфер приема по таймеру с i2с, 512 bytes
+#endif
 } i2c_dev_t;
 
 extern i2c_dev_t i2c_dev;

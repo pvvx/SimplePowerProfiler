@@ -8,6 +8,8 @@
 #ifndef _CMD_CFG_H_
 #define _CMD_CFG_H_
 
+#include "ina228.h"
+
 // 9 RF packets: 20 + 27*8 = 236 bytes, (236-2)/2 = max 117 16-bits word
 #define SMPS_BLK_CNT	116 // ((20+27*8-2)/2)&0xFFFE = 116 (9 rf-tx block)
 #define DLE_DATA_SIZE	(SMPS_BLK_CNT*2+2) // [116*2+2 = 234], MTU = 234+7 = 241 ?
@@ -29,10 +31,12 @@
 #define CMD_DEV_I2C	0x07 // blk out regs i2c data
 // ADC cfg
 #define CMD_DEV_CAD	0x08 // Get/Set CFG/ini ADC & Start measure
+#define CMD_DEV_ECAD 0x38 // Get/Set CFG/ini Start 24 bit measure
 // DAC cfg
 #define CMD_DEV_DAC	0x09 // DAC cfg
 // ADC out samples
 #define CMD_DEV_ADC	0x0A // blk out regs ADC data
+#define CMD_DEV_EADC 0x3A // blk out 24bits data
 // TST device
 #define CMD_DEV_TST	0x0B // blk out X data, cfg TST device
 // I2C rd/wr
@@ -245,6 +249,7 @@ typedef struct __attribute__((packed)) _blk_tx_pkt_t{
 		int32_t sd[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		dev_i2c_cfg_t ci2c;
 		dev_adc_cfg_t cadc;
+    dev_ina228_cfg_t ina228;
 		ble_con_t con;
 		ble_cfg_t ble;
 		reg_wr_t reg;
@@ -271,6 +276,7 @@ typedef struct __attribute__((packed)) _blk_rx_pkt_t{
 		int32_t sd[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		dev_i2c_cfg_t ci2c;
 		dev_adc_cfg_t cadc;
+    dev_ina228_cfg_t ina228;
 		ble_con_t con;
 		ble_cfg_t ble;
 		reg_wr_t reg;
@@ -288,10 +294,6 @@ typedef struct __attribute__((packed)) _blk_rx_pkt_t{
 
 //extern blk_rx_pkt_t read_pkt;
 extern blk_tx_pkt_t send_pkt;
-
-extern volatile uint32_t all_read_count;
-extern volatile uint32_t all_overflow_cnt; // overflow
-
 
 /*******************************************************************************
  * Function Name : usb_ble_cmd_decode.

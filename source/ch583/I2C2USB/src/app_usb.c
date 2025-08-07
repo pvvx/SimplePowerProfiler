@@ -298,7 +298,7 @@ void app_usb_init()
  */
 void DevEP1_OUT_Deal( uint8_t l )
 { /* User customizable */
-#if USE_TEST_ADC || USE_I2C_DEV
+#if USE_I2C_DEV
     if(app_cmd_len == 0 && l) {
         if(l > APP_RX_BUFFER_LENGTH)
             app_cmd_len = APP_RX_BUFFER_LENGTH;

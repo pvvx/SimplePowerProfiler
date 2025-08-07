@@ -104,6 +104,51 @@ int I2CBusReadWord(unsigned char i2c_addr, unsigned char reg_addr, void *preg_da
 	return ret;
 }
 
+int I2CBusRead24bits(unsigned char i2c_addr, unsigned char reg_addr, void *preg_data)
+{
+  int ret = -1;
+  uint8_t * pbuf = preg_data;
+  if((R16_I2C_CTRL1 & RB_I2C_PE) == 0) return ret; // i2c off
+  R16_I2C_CTRL1 &= ~RB_I2C_STOP;
+  R16_I2C_OADDR1 = I2C_AckAddr_7bit | i2c_addr;
+  R16_I2C_CTRL1 |= RB_I2C_START;
+  ret = i2c_wait_status(RB_I2C_SB);
+  if(!ret) {
+    R16_I2C_DATAR = i2c_addr;
+    ret = i2c_wait_status(RB_I2C_ADDR);
+    if(!ret) {
+      R16_I2C_DATAR = reg_addr;
+      ret = i2c_wait_status(RB_I2C_TxE | RB_I2C_BTF);
+      if(!ret) {
+        R16_I2C_OADDR1 = I2C_AckAddr_7bit | i2c_addr | 1;
+        R16_I2C_CTRL1 |= RB_I2C_ACK | RB_I2C_START;
+        ret = i2c_wait_status(RB_I2C_SB);
+        if(!ret) {
+          R16_I2C_DATAR = i2c_addr | 1;
+          ret = i2c_wait_status(RB_I2C_ADDR);
+          if(!ret) {
+            ret = i2c_wait_status(RB_I2C_RxNE);
+            if(!ret) {
+              pbuf[2] =  R16_I2C_DATAR;
+              ret = i2c_wait_status(RB_I2C_RxNE);
+              if(!ret) {
+                R16_I2C_CTRL1 &= ~RB_I2C_ACK;
+                pbuf[1] =  R16_I2C_DATAR;
+                ret = i2c_wait_status(RB_I2C_RxNE);
+                if(!ret) {
+                  pbuf[0] =  R16_I2C_DATAR;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  R16_I2C_CTRL1 |= RB_I2C_STOP;
+  return ret;
+}
+
 void I2CBusDeInit(void) {
   if(R16_I2C_CTRL1 & RB_I2C_PE) { // I2C peripheral enable ?
     R16_I2C_CTRL1 |= RB_I2C_SWRST;

@@ -15,6 +15,7 @@ const
     ADC1_DEVICE_ID = $21;
     ADC2_DEVICE_ID = $22;  // BL702
     ADC3_DEVICE_ID = $23;
+    I2C_24BIT_DEVICE_ID = $24;
     HI_DEVICE_TYPE = $10;
 
     INAxxx_MID_REG = $fe;
@@ -1626,8 +1627,9 @@ begin
         dev_id := bufrx[0];
         dev_ver := bufrx[2] or (bufrx[3] shl 8);
         StatusBar.Panels[2].Text:='Устройство ID:' + IntToHex(dev_type, 2) + '-' + IntToHex(dev_id, 2) +' версии '+IntToStr((dev_ver shr 12) and $0f) +'.'+IntToStr((dev_ver shr 8) and $0f)+'.'+IntToStr((dev_ver shr 4) and $0f)+'.'+IntToStr(dev_ver and $0f)+' подключено на '+ sComNane +'.';
-        if (dev_id = I2C_DEVICE_ID) 
-        or (dev_id = ADC1_DEVICE_ID) 
+        if (dev_id = I2C_24BIT_DEVICE_ID) then dev_id := I2C_DEVICE_ID;
+        if (dev_id = I2C_DEVICE_ID)
+        or (dev_id = ADC1_DEVICE_ID)
         or (dev_id = ADC2_DEVICE_ID)
         or (dev_id = ADC3_DEVICE_ID) then begin
           if not StopReadDevice then begin

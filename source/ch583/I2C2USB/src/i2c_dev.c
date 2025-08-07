@@ -13,22 +13,56 @@
 #include "i2c_dev.h"
 #include "crc16.h"
 
-extern volatile uint32_t all_read_count;
-extern volatile uint32_t all_overflow_cnt; // overflow
+#define MAX_I2C_PKTCNT16 60 // (SMPS_BLK_CNT/2)
+#define MAX_I2C_PKTCNT24 40 // (SMPS_BLK_CNT/3)
 
-#define MAX_I2C_PKTCNT 60 // (SMPS_BLK_CNT/2)
+#define MIN_TIM_IRQ 70000 // (min 55 us)  70000/clk_khz  2*5w*10bit*1500000/clk = us
 
 i2c_dev_t i2c_dev; // I2C DEV flags & buffers
+status_sps_t status;
 
 typedef struct __attribute__((packed)) _i2c_blk_t{
 	uint8_t count;
 	uint8_t id;
-	uint16_t data[MAX_I2C_PKTCNT];
+	uint16_t data[MAX_I2C_PKTCNT16];
 } i2c_blk_t;
 
 i2c_blk_t i2c_blk;
 
-
+#if USE_I2C_24BIT
+const dev_i2c_cfg_t def_cfg_i2c  = {
+    .pktcnt = 0, // max = SMPS_BLK_CNT;
+    .multiplier = 0,
+    .time = 1052, // us
+    .clk_khz = 800,
+    .init[0].dev_addr = I2C_ADDR_INA228,
+    .init[0].reg_addr = INA228_RA_CONFIG,
+    .init[0].data = 3<<14,  // System Reset sets registers to default values
+    .init[1].dev_addr = I2C_ADDR_INA228,
+    .init[1].reg_addr = INA228_RA_CONFIG,
+    .init[1].data = 0x0000,  // Shunt full scale range 163.84 mV
+    .init[2].dev_addr =I2C_ADDR_INA228,
+    .init[2].reg_addr = INA228_RA_DIAG_ALRT,
+    .init[2].data = 1<<14,  // Alert pin to be asserted when the Conversion Ready
+    .init[3].dev_addr = I2C_ADDR_INA228,
+    .init[3].reg_addr = INA228_RA_ADC_CONFIG,
+    .init[3].data = 0x0000,
+    .rd[0].dev_addr = I2C_ADDR_INA228,
+    .rd[0].reg_addr = INA228_RA_VBUS,
+    .rd[1].dev_addr = I2C_ADDR_INA228,
+    .rd[1].reg_addr = INA228_RA_VSHUNT,
+    .rd[2].dev_addr = 0x00,
+    .rd[2].reg_addr = 0x00,
+    .rd[3].dev_addr = 0x00,
+    .rd[3].reg_addr = 0x00,
+    .slp[0].dev_addr = I2C_ADDR_INA228,
+    .slp[0].reg_addr = INA228_RA_ADC_CONFIG,
+    .slp[0].data = 0x0000,
+    .slp[1].dev_addr = 0x00,
+    .slp[1].reg_addr = 0x00,
+    .slp[1].data = 0x0000
+};
+#else
 const dev_i2c_cfg_t def_cfg_i2c  = {
     .pktcnt = 0, // max = SMPS_BLK_CNT;
     .multiplier = 0, // * 16
@@ -61,7 +95,7 @@ const dev_i2c_cfg_t def_cfg_i2c  = {
     .slp[1].reg_addr = 0x00,
     .slp[1].data = 0x0000
 };
-
+#endif
 
 // I2C DEV config (store EEP_ID_I2C_CFG)
 dev_i2c_cfg_t cfg_i2c;
@@ -80,7 +114,15 @@ void TMR1_IRQHandler(void) {
 #endif
   if(TMR1_GetITFlag(RB_TMR_IF_CYC_END)) {
 	  if(i2c_dev.timer_flg) {
-	    I2CBusReadWord(i2c_dev.raddr->dev_addr, i2c_dev.raddr->reg_addr, &i2c_dev.i2c_buf[i2c_dev.i2c_buf_wr]);
+#if USE_I2C_24BIT
+	    if(i2c_dev.i2c_rd_24bit) {
+	      I2CBusRead24bits(i2c_dev.raddr->dev_addr, i2c_dev.raddr->reg_addr, &i2c_dev.i2c_buf[i2c_dev.i2c_buf_wr]);
+	    }
+	    else
+#endif
+	    {
+	      I2CBusReadWord(i2c_dev.raddr->dev_addr, i2c_dev.raddr->reg_addr, &i2c_dev.i2c_buf[i2c_dev.i2c_buf_wr]);
+	    }
 	    i2c_dev.i2c_buf_wr++;
 	    i2c_dev.raddr++;
 	    if(i2c_dev.raddr->dev_addr == 0 || i2c_dev.raddr > &cfg_i2c.rd[MAX_READ_REGS-1]) {
@@ -127,7 +169,6 @@ void I2CDevTimerInit(uint32_t period_us) {
   PFIC_EnableIRQ(TMR1_IRQn);
 }
 
-
 /* I2C Device go Sleep */
 void I2CDevSleep(void) {
 	cfg_i2c.pktcnt = 0;
@@ -155,12 +196,12 @@ void I2CDevSleep(void) {
 void I2CDevWakeUp(void) {
 #ifdef I2C_DEV_POWER
 	  GPIOB_ModeCfg(I2C_DEV_POWER | I2C_DEV_SCL | I2C_DEV_SDA, GPIO_ModeIN_PU);
-	  DelayUs(128);
+	  sleep_us(128);
 	  GPIOB_SetBits(I2C_DEV_POWER);
     GPIOB_ModeCfg(I2C_DEV_POWER, GPIO_ModeOut_PP_5mA);
     i2c_printf("I2C: Power On\r\n");
     GPIOB_ModeCfg(I2C_DEV_POWER, GPIO_ModeOut_PP_20mA);
-    DelayMs(2);
+    sleep_ms(2);
 #endif
     cfg_i2c.pktcnt = 0;
     I2CDevStart();
@@ -212,18 +253,27 @@ int I2CDevStart(void) {
 	uint32_t clk_khz;
 	uint32_t t_rd_us;
 	i2c_dev.timer_flg = 0;
-  if(cfg_i2c.pktcnt > MAX_I2C_PKTCNT)
-		cfg_i2c.pktcnt = MAX_I2C_PKTCNT;
+#if USE_I2C_24BIT
+	if(i2c_dev.i2c_rd_24bit) {
+    if(cfg_i2c.pktcnt > MAX_I2C_PKTCNT24)
+      cfg_i2c.pktcnt = MAX_I2C_PKTCNT24;
+	} else
+#endif
+	{
+	  if(cfg_i2c.pktcnt > MAX_I2C_PKTCNT16)
+	    cfg_i2c.pktcnt = MAX_I2C_PKTCNT16;
+	}
 	clk_khz = cfg_i2c.clk_khz & 0x7fff;
-	if(clk_khz < 50 || clk_khz > 1200) {
-		clk_khz = 1200;
+	if(clk_khz < MIN_I2C_CLK_KHZ || clk_khz > MAX_I2C_CLK_KHZ) {
+		clk_khz = DEF_I2C_CLK_KHZ;
 		cfg_i2c.clk_khz &= 0x8000;
 		cfg_i2c.clk_khz |= clk_khz;
 	}
 	i2c_printf("I2C: Set CLK %i kHz, stretch %u\n", cfg_i2c.clk_khz & 0x7fff, cfg_i2c.clk_khz >> 15);
-  I2CBusInit();
+
+	I2CBusInit();
 	t_rd_us = cfg_i2c.time << cfg_i2c.multiplier;
-	if(t_rd_us < (7*10*1000)/clk_khz) { // 2*5w*10bit*1000000/clk = us
+	if(t_rd_us < MIN_TIM_IRQ/clk_khz) { // 2*5w*10bit*1000000/clk = us
 		cfg_i2c.pktcnt = 0;
 		I2CDevTimerStop();
 		PRINT("I2C: Error timing - step read: %i us, i2c clk: %i kHz!\r\n", t_rd_us, clk_khz);
@@ -233,24 +283,32 @@ int I2CDevStart(void) {
 	if (cfg_i2c.pktcnt) {
 	  I2CDevTimerInit(t_rd_us);
 		// start (new) counts
-		all_read_count = 0;
-		all_overflow_cnt = 0;
+	  status.all_read_count = 0;
+		status.all_overflow_cnt = 0;
 	} else {
 	    I2CDevTimerStop();
 		// выход по Stop (cfg_i2c.rd_count = 0), init dev i2c only
 	}
 	for(i = 0; i < MAX_INIT_REGS && cfg_i2c.init[i].dev_addr; i++) {
-	  DelayUs(200);
+	  i2c_printf("I2C: Write %02x/%02x:%04x\r\n", cfg_i2c.init[i].dev_addr, cfg_i2c.init[i].reg_addr, cfg_i2c.init[i].data);
 		if (I2CBusWriteWord(cfg_i2c.init[i].dev_addr, cfg_i2c.init[i].reg_addr, cfg_i2c.init[i].data)) {
 			cfg_i2c.pktcnt = 0;
 			I2CDevTimerStop();
 			PRINT("I2C: Error write addr: %02x:%02x, data: %04x!\r\n", cfg_i2c.init[i].dev_addr, cfg_i2c.init[i].reg_addr, cfg_i2c.init[i].data);
 			// return 0; // error dev i2c
 		}
+    sleep_us(512);
 	}
 	if (cfg_i2c.pktcnt) {
-		i2c_printf("I2C: blk %i word\r\n", cfg_i2c.pktcnt);
+	  i2c_printf("I2C: blk %i word\r\n", cfg_i2c.pktcnt);
 		if(i2c_dev.raddr->dev_addr) {
+      sleep_us(t_rd_us);
+      //i2c_printf("I2C: Sleep %u us\r\n", t_rd_us + 512);
+#if USE_I2C_24BIT
+      if(i2c_dev.i2c_rd_24bit == 2) {
+        sleep_us(t_rd_us);
+      }
+#endif
 		  i2c_dev.timer_flg = 1;
 		  I2CDevTimerStart(); // Enable timer
 		} else {
@@ -260,7 +318,6 @@ int I2CDevStart(void) {
 	}
 	return 1; // ok
 }
-
 
 void I2CDevTask(void) {
 	uint32_t prd = i2c_dev.i2c_buf_rd;
@@ -272,45 +329,85 @@ void I2CDevTask(void) {
 	if(pwr < prd) {
 		size = I2C_BUF_SIZE - prd + pwr;
 		if(size >= cfg_i2c.pktcnt) {
-			i2c_blk.count = cfg_i2c.pktcnt << 1;
+			i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt + cfg_i2c.pktcnt;
 			size = cfg_i2c.pktcnt;
-			i2c_blk.id = CMD_DEV_I2C;
-			for(int i = prd; i < I2C_BUF_SIZE && size; i++) {
-				*p++ = (uint8_t)i2c_dev.i2c_buf[i];
-        *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
-				size--;
-			}
-			i2c_dev.i2c_buf_rd = (uint8_t)size;
-			for(int i = 0; size; i++) {
-				*p++ = (uint8_t)i2c_dev.i2c_buf[i];
-        *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
-				size--;
-			}
-		} else
+#if USE_I2C_24BIT
+      if(i2c_dev.i2c_rd_24bit) {
+        i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt + cfg_i2c.pktcnt;
+        i2c_blk.id = CMD_DEV_EADC;
+        for(int i = prd; i < I2C_BUF_SIZE && size; i++) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[i];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 16);
+          size--;
+        }
+        i2c_dev.i2c_buf_rd = (uint8_t)size;
+        for(int i = 0; size; i++) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[i];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 16);
+          size--;
+        }
+      }
+      else
+#endif
+      {
+        i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt;
+        i2c_blk.id = CMD_DEV_I2C;
+        for(int i = prd; i < I2C_BUF_SIZE && size; i++) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[i];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
+          size--;
+        }
+        i2c_dev.i2c_buf_rd = (uint8_t)size;
+        for(int i = 0; size; i++) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[i];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[i] >> 8);
+          size--;
+        }
+      }
+		}
+		else
 			return;
 
 	} else if (pwr > prd) {
 		size = pwr - prd;
 		if(size >= cfg_i2c.pktcnt) {
-			i2c_blk.count = cfg_i2c.pktcnt << 1;
 			size = cfg_i2c.pktcnt;
-			i2c_blk.id = CMD_DEV_I2C;
-			while(size) {
-				*p++ = (uint8_t)i2c_dev.i2c_buf[prd];
-        *p++ = (uint8_t)(i2c_dev.i2c_buf[prd++] >> 8);
-				size--;
-			}
-			i2c_dev.i2c_buf_rd = (uint8_t)prd;
+#if USE_I2C_24BIT
+      if(i2c_dev.i2c_rd_24bit) {
+        i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt + cfg_i2c.pktcnt;
+        i2c_blk.id = CMD_DEV_EADC;
+        while(size) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[prd];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[prd] >> 8);
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[prd++] >> 16);
+          size--;
+        }
+      }
+      else
+#endif
+      {
+        i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt;
+        i2c_blk.id = CMD_DEV_I2C;
+        while(size) {
+          *p++ = (uint8_t)i2c_dev.i2c_buf[prd];
+          *p++ = (uint8_t)(i2c_dev.i2c_buf[prd++] >> 8);
+          size--;
+        }
+      }
+      i2c_dev.i2c_buf_rd = (uint8_t)prd;
+
 		} else
 			return;
 	} else
 		return;
 	size = 2 + i2c_blk.count;
   if(app_drv_fifo_write(&app_tx_fifo, (uint8_t *)&i2c_blk, (uint16_t *)&size) == APP_DRV_FIFO_RESULT_SUCCESS) {
-    all_read_count++;
+    status.all_read_count++;
 	} else {
 	  PRINT("I2C: buffer overflow!\r\n");
-		all_overflow_cnt++;
+	  status.all_overflow_cnt++;
 	}
 }
 

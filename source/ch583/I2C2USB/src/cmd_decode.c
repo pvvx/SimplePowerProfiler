@@ -6,24 +6,113 @@
  */
 #include "common.h"
 #include "cmd_cfg.h"
-#include "i2cbus.h"
 #include "i2c_dev.h"
 
-#define INT_DEV_ID	0x1016  // DevID = 0x1026
-#define INT_DEV_VER 0x0006  // Ver 1.2.3.4 = 0x1234
-
-// status
-volatile uint32_t all_read_count;
-volatile uint32_t all_overflow_cnt; // overflow
-
+#define INT_DEV_ID  0x1024  // DevID = 0x1024
+#define INT_DEV_VER 0x0007  // Ver 1.2.3.4 = 0x1234
 
 //blk_rx_pkt_t read_pkt; // приемный буфер
 blk_tx_pkt_t send_pkt; // буфер отправки
 
-//--------- < Test!
-static inline void test_function(void) {
+/*******************************************************************************
+ *******************************************************************************/
+const uint16_t tab_freg[8] = {
+    20000, // 50us 1/0.000050=20000.0000Hz
+    11905, // 84us 1/0.000084=11904.7619Hz
+    6666,  // 150us 1/0.000150=6666.6667Hz
+    3571,  // 280us 1/0.000280=3571.4286Hz
+    1851,  // 540us 1/0.000540=1851.8519Hz
+    950,   // 1052us 1/0.001052=950.5703Hz
+    482,   // 2074us 1/0.002074=482.1601Hz
+    242    // 4120us 1/0.004120=242.7184Hz
 };
-//--------- Test! >
+
+/* delay for Conversion Ready INA228 */
+// Sample time:    50,  84, 150, 280,  540, 1052  2074  4120 us
+// RDY 2 channel: 188, 248, 379, 640, 1160, 1400, 2431, 8326 us
+const uint16_t tab_time_us[8] = {
+    100, // 50 us not work!
+    84,
+    150,
+    280,
+    540,
+    1052,
+    2074,
+    4120
+};
+
+dev_ina228_cfg_t cfg_ina228;
+
+int ina228_start(dev_ina228_cfg_t * cfg) {
+  int i;
+  uint16_t reg;
+
+  i2c_dev.timer_flg = 0;
+
+  // задать конфигурацию INA228
+  cfg_i2c.init[0].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.init[0].reg_addr = INA228_RA_CONFIG;
+  cfg_i2c.init[0].data = 3<<14;  // System Reset sets registers to default values
+
+  if(cfg->sh) // Shunt 0 = 40.96 mV, 1 = 163.84 mV
+    reg = 1<<4; // Shunt full scale range 40.96 mV
+  else
+    reg = 0; // Shunt full scale range 163.84 mV
+
+  cfg_i2c.init[1].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.init[1].reg_addr = INA228_RA_CONFIG;
+  cfg_i2c.init[1].data = reg;  // Shunt full scale range +-40.96/163.84 mV
+
+  cfg_i2c.init[2].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.init[2].reg_addr = INA228_RA_DIAG_ALRT;
+  cfg_i2c.init[2].data = 1<<14;  // Alert pin to be asserted when the Conversion Ready
+
+  cfg_i2c.rd[0].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.rd[0].reg_addr = INA228_RA_VBUS;
+  cfg_i2c.rd[1].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.rd[1].reg_addr = INA228_RA_VSHUNT;
+  cfg_i2c.rd[2].dev_addr = 0;
+
+  // INA228_RA_ADC_CONFIG
+  reg = 0;
+  if(cfg->chnl == 3) {
+    reg = 0x0b<<12; // Continuous Shunt + Vbus
+    i2c_dev.i2c_rd_24bit = 2;
+  } else  if(cfg->chnl == 2) {
+    cfg_i2c.rd[1].reg_addr = INA228_RA_VBUS;
+    reg = 0x09<<12; // Continuous Vbus only
+    i2c_dev.i2c_rd_24bit = 1;
+  } else {
+    cfg_i2c.rd[0].reg_addr = INA228_RA_VSHUNT;
+    reg = 0x0a<<12; // Continuous Shunt only
+    i2c_dev.i2c_rd_24bit = 1;
+  }
+  // частота
+  for(i = 0; i < 7; i++) {
+    if(cfg->smpr >= tab_freg[i])
+      break;
+  }
+  reg |= (i<<3)|(i<<6)|(i<<9);
+
+  cfg_i2c.init[3].dev_addr = I2C_ADDR_INA228;
+  cfg_i2c.init[3].reg_addr = INA228_RA_ADC_CONFIG;
+  cfg_i2c.init[3].data = reg;  // Continuous shunt voltage only
+
+
+  cfg_i2c.clk_khz = DEF_I2C_CLK_KHZ; // | 0x8000;
+  cfg_i2c.multiplier = 0;
+  cfg_i2c.time = tab_time_us[i]; // us
+
+  cfg_i2c.pktcnt = 20;  // 20*3+2 = 62 bytes (+2 head)
+
+  return I2CDevStart();
+}
+
+int ina228_stop(void) {
+  cfg_i2c.pktcnt = 0;
+  //cfg_i2c.clk_khz = 400 | 0x8000;
+  return I2CDevStart();
+}
 
 /*******************************************************************************
  * Function Name : usb_ble_cmd_decode.
@@ -78,12 +167,28 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 				    pbufo->data.scf.i2c = 1;
 				}
 #endif
-#if	(USE_ADC_DEV)
+#if	0 // (USE_ADC_DEV)
 				if(pbufi->data.scf.adc)
 					pbufo->data.scf.adc = flash_write_cfg(&cfg_adc, EEP_ID_ADC_CFG, sizeof(cfg_adc));
 #endif
 				txlen = sizeof(dev_scf_t) + sizeof(blk_head_t);
 				break;
+#if USE_I2C_24BIT
+      case CMD_DEV_ECAD: // Get/Set CFG/ini ADC & Start measure
+        if (pbufi->head.size) {
+          memcpy(&cfg_ina228, &pbufi->data.ina228,
+            (pbufi->head.size > sizeof(cfg_ina228))? sizeof(cfg_ina228) : pbufi->head.size);
+          if(pbufi->data.ina228.enable) {
+            ina228_start(&cfg_ina228);
+            //cfg_adc.chnl = cfg_ina.chnls;
+            //cfg_adc.smpr = cfg_ina.freq;
+          } else
+            ina228_stop();
+        }
+        memcpy(&pbufo->data, &cfg_ina228, sizeof(cfg_ina228));
+        txlen = sizeof(cfg_ina228) + sizeof(blk_head_t);
+        break;
+#endif
 			//-------
 			case CMD_DEV_GRG: // Get reg
 				tmp = i2c_dev.timer_flg;
@@ -114,14 +219,14 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 				i2c_dev.timer_flg = tmp;
 				break;
 #endif // USE_I2C_DEV
-#if (USE_ADC_DEV)
+#if 0 // (USE_ADC_DEV)
 			case CMD_DEV_CAD: // Get/Set CFG/ini ADC & Start measure
 				if (pbufi->head.size) {
 					memcpy(&cfg_adc, &pbufi->data.cadc,
 						(pbufi->head.size > sizeof(cfg_adc))? sizeof(cfg_adc) : pbufi->head.size);
 					if(pbufi->data.cadc.pktcnt) {
-						all_read_count = 0;
-						all_overflow_cnt = 0;
+					  status.all_read_count = 0;
+						status.all_overflow_cnt = 0;
 						ADC_Start(&cfg_adc);
 					} else
 						ADC_Stop();
@@ -140,8 +245,8 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 			//-------
 			case CMD_DEV_STA: // Status
 			  // PRINT("CMD_DEV_STA\n");
-				pbufo->data.sta.rd_cnt = all_read_count;
-				pbufo->data.sta.to_cnt = all_overflow_cnt;
+        pbufo->data.sta.rd_cnt = status.all_read_count;
+        pbufo->data.sta.to_cnt = status.all_overflow_cnt;
 				txlen = sizeof(blk_head_t) + sizeof(dev_sta_t);
 				break;
 
@@ -193,7 +298,7 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 				break;
 #endif
 			case CMD_DEV_TST: // 	blk out X data, cfg TST device
-				test_function();
+				// test_function();
 				break;
 			default:
 				pbufo->head.cmd |= CMD_ERR_FLG; // Error cmd

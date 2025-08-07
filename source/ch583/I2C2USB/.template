@@ -4,12 +4,12 @@ Series=CH32L103
 RTOS=NoneOS
 MCU=CH582F
 Link=WCH-Link
-PeripheralVersion==================1.0
-Description==================
+PeripheralVersion==========================1.0
+Description==========================
 Mcu Type=CH58x
 Address=0x00000000
 Target Path=obj\I2C2USB.hex
-CLKSpeed=1
+CLKSpeed=2
 DebugInterfaceMode=-1
 Erase All=true
 Program=true
