@@ -1,0 +1,1 @@
+@E:\Bouffalo\bflb_flash_tool\bflb_mcu_tool.exe --chipname=bl702 --port=COM15 --xtal=32M --firmware=".\build\build_out\project_bl702.bin"

@@ -14,7 +14,7 @@ Simple PowerProfiler on INA219, INA226, INA231, INA3221
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/CH583_CH592.gif)
 
-* CH582F supports INA228 (20 bits) up to 11 ksps.
+* CH582F supports INA228 (20 bits) up to 11 ksps (I2C CLK up 1.5 MHz).
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/PowerProfiler.gif)
 
