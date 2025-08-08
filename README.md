@@ -4,6 +4,8 @@ Simple PowerProfiler on INA219, INA226, INA231, INA3221
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/SPP-INA3221.png)
 
+* BL702 supports INA228/INA229 (20 bits) up to 20 ksps (I2C CLK up 2 MHz).
+
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/STM32INA219.gif)
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/STM32INA226.gif)
