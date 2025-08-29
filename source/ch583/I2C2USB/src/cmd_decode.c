@@ -5,7 +5,6 @@
  *      Author: pvvx
  */
 #include "common.h"
-#include "cmd_cfg.h"
 #include "i2c_dev.h"
 
 #define INT_DEV_ID  0x1024  // DevID = 0x1024
@@ -124,7 +123,7 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 	unsigned int txlen = 0;
 	uint32_t tmp;
 //	if (rxlen >= sizeof(blk_head_t)) {
-//		if (rxlen >= pbufi->head.size + sizeof(blk_head_t)) {
+	if (rxlen >= pbufi->head.size + sizeof(blk_head_t)) {
 			pbufo->head.cmd = pbufi->head.cmd;
 			switch (pbufi->head.cmd) {
 			case CMD_DEV_VER: // Get Ver
@@ -174,6 +173,12 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 				txlen = sizeof(dev_scf_t) + sizeof(blk_head_t);
 				break;
 #if USE_I2C_24BIT
+			case CMD_DEV_FRD:
+			  if (pbufi->head.size)
+			    i2c_dev.i2c_rd_24bit =  pbufi->data.frd.format;
+			  pbufo->data.frd.format = i2c_dev.i2c_rd_24bit;
+			  txlen = sizeof(dev_i2c_frd_t) + sizeof(blk_head_t);
+			  break;
       case CMD_DEV_ECAD: // Get/Set CFG/ini ADC & Start measure
         if (pbufi->head.size) {
           memcpy(&cfg_ina228, &pbufi->data.ina228,
@@ -189,6 +194,25 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
         txlen = sizeof(cfg_ina228) + sizeof(blk_head_t);
         break;
 #endif
+#if (USE_I2C_DEV)
+      case CMD_DEV_UTR: // I2C read/write
+        txlen = pbufi->data.utr.rdlen & 0x7f;
+        if(pbufi->head.size >= sizeof(i2c_utr_t)
+          &&  txlen <= sizeof(pbufo->data.wr.data)
+          &&  I2CBusUtr(&pbufo->data.wr.data,
+              &pbufi->data.utr,
+              pbufi->head.size - sizeof(i2c_utr_t)) // wrlen:  addr len - 1
+              ) {
+          pbufo->data.wr.dev_addr = pbufi->data.utr.wrdata[0];
+          pbufo->data.wr.rd_count = txlen;
+          txlen += sizeof(i2c_rd_t) + sizeof(blk_head_t);
+        } else {
+          pbufo->head.cmd |= CMD_ERR_FLG; // Error cmd
+          txlen = 0 + sizeof(blk_head_t);
+        }
+        break;
+#endif // USE_I2C_DEV
+
 			//-------
 			case CMD_DEV_GRG: // Get reg
 				tmp = i2c_dev.timer_flg;
@@ -306,7 +330,7 @@ unsigned int cmd_decode(blk_tx_pkt_t * pbufo, blk_rx_pkt_t * pbufi, unsigned int
 				break;
 			};
 			pbufo->head.size = txlen - sizeof(blk_head_t);
-//		}
+		}
 //		else
 //			rxlen = 0;
 //	}

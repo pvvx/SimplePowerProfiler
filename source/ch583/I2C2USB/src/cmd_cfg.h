@@ -31,11 +31,12 @@
 #define CMD_DEV_I2C	0x07 // blk out regs i2c data
 // ADC cfg
 #define CMD_DEV_CAD	0x08 // Get/Set CFG/ini ADC & Start measure
+#define CMD_DEV_FRD 0x18 // Get/Set format I2C read 16 or 24 bits
 #define CMD_DEV_ECAD 0x38 // Get/Set CFG/ini Start 24 bit measure
 // DAC cfg
 #define CMD_DEV_DAC	0x09 // DAC cfg
 // ADC out samples
-#define CMD_DEV_ADC	0x0A // blk out regs ADC data
+#define CMD_DEV_ADC	0x0A // blk out regs ADC 16bits data
 #define CMD_DEV_EADC 0x3A // blk out 24bits data
 // TST device
 #define CMD_DEV_TST	0x0B // blk out X data, cfg TST device
@@ -161,6 +162,10 @@ typedef struct __attribute__((packed)) _dev_i2c_cfg_t {
 	uint16_t crc;
 } dev_i2c_cfg_t; // [38] 6 + 4*4 + 2*4 + 4*2
 
+typedef struct  __attribute__((packed)) _dev_i2c_frd_t{
+  uint8_t format; // 0 - 16 bit, else 24 bits
+} dev_i2c_frd_t;
+
 extern dev_i2c_cfg_t cfg_i2c; // store in eep
 
 // CMD_DEV_PWR Power On/Off, Sleep
@@ -248,6 +253,7 @@ typedef struct __attribute__((packed)) _blk_tx_pkt_t{
 		uint32_t ud[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		int32_t sd[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		dev_i2c_cfg_t ci2c;
+		dev_i2c_frd_t frd;
 		dev_adc_cfg_t cadc;
     dev_ina228_cfg_t ina228;
 		ble_con_t con;
@@ -275,6 +281,7 @@ typedef struct __attribute__((packed)) _blk_rx_pkt_t{
 		uint32_t ud[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		int32_t sd[(DLE_DATA_SIZE-sizeof(blk_head_t))/sizeof(uint32_t)];
 		dev_i2c_cfg_t ci2c;
+		dev_i2c_frd_t frd;
 		dev_adc_cfg_t cadc;
     dev_ina228_cfg_t ina228;
 		ble_con_t con;
@@ -282,7 +289,7 @@ typedef struct __attribute__((packed)) _blk_rx_pkt_t{
 		reg_wr_t reg;
 		i2c_rd_t rd;
 		i2c_wr_t wr;
-//		i2c_utr_t utr;
+		i2c_utr_t utr;
 		dev_pwr_slp_t pwr;
 		dev_dbg_t dbg;
 		dev_scf_t scf;

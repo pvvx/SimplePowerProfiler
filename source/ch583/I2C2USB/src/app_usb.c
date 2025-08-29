@@ -16,7 +16,7 @@
 #include "common.h"
 #include "app_drv_fifo.h"
 #include "app_usb.h"
-#include "cmd_cfg.h"
+#include "i2c_dev.h"
 
 #if DEBUG_USB
 uint32_t debug_usb;
@@ -300,8 +300,8 @@ void DevEP1_OUT_Deal( uint8_t l )
 { /* User customizable */
 #if USE_I2C_DEV
     if(app_cmd_len == 0 && l) {
-        if(l > APP_RX_BUFFER_LENGTH)
-            app_cmd_len = APP_RX_BUFFER_LENGTH;
+        if(l > sizeoff(app_cmd_buf))
+            app_cmd_len = sizeoff(app_cmd_buf);
         else
             app_cmd_len = l;
         memcpy(app_cmd_buf, EP1_Databuf, app_cmd_len);

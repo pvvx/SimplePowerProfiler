@@ -5,7 +5,6 @@
 #include "common.h"
 #include "app_drv_fifo.h"
 #include "app_usb.h"
-#include "cmd_cfg.h"
 #include "i2c_dev.h"
 
 int old_send_len;

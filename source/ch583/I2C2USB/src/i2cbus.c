@@ -5,8 +5,6 @@
 #include "common.h"
 #if (USE_I2C_DEV)
 #include "i2c_dev.h"
-#include "i2cbus.h"
-
 
 uint32_t i2c_wait_status(uint32_t mask) {
   uint32_t ret = -1; // timeout
@@ -32,7 +30,6 @@ uint32_t i2c_wait_status(uint32_t mask) {
   }
   return ret;
 }
-
 
 // Return NAK/ERR
 int I2CBusWriteWord(unsigned char i2c_addr, unsigned char reg_addr, unsigned short reg_data)
@@ -142,6 +139,62 @@ int I2CBusRead24bits(unsigned char i2c_addr, unsigned char reg_addr, void *preg_
             }
           }
         }
+      }
+    }
+  }
+  R16_I2C_CTRL1 |= RB_I2C_STOP;
+  return ret;
+}
+
+/* Universal I2C/SMBUS read-write transaction
+ * wrlen = 1..127 ! */
+int I2CBusUtr(void * outdata, i2c_utr_t *tr, unsigned int wrlen) {
+  unsigned char * pwrdata = (unsigned char *) &tr->wrdata;
+  unsigned char * poutdata = (unsigned char *) outdata;
+  unsigned int cntstart = wrlen - (tr->mode & 0x7f);
+  unsigned int rdlen = tr->rdlen & 0x7f;
+
+  int ret = -1;
+  if((R16_I2C_CTRL1 & RB_I2C_PE) == 0) return ret; // i2c off
+  R16_I2C_CTRL1 &= ~RB_I2C_STOP;
+  R16_I2C_OADDR1 = I2C_AckAddr_7bit | *pwrdata; // i2c addr
+  R16_I2C_CTRL1 |= RB_I2C_START;
+  ret = i2c_wait_status(RB_I2C_SB);
+  if(!ret) {
+    R16_I2C_DATAR = *pwrdata++; // i2c wr/rd addr
+    ret = i2c_wait_status(RB_I2C_ADDR);
+    while((!ret) && wrlen--) {
+        // write data
+      R16_I2C_DATAR = *pwrdata++; // wr data
+      ret = i2c_wait_status(RB_I2C_TxE | RB_I2C_BTF);
+      if((!ret) && wrlen == cntstart) { // + send start & id
+        if(tr->mode & 0x80) {
+          // generate stop
+          R16_I2C_CTRL1 |= RB_I2C_STOP;
+          ret = i2c_wait_status(RB_I2C_TxE | RB_I2C_BTF);
+          if(ret)
+            break;
+        }
+        // generate start
+        R16_I2C_OADDR1 |= 1;
+        R16_I2C_CTRL1 |= RB_I2C_ACK | RB_I2C_START;
+        ret = i2c_wait_status(RB_I2C_SB);
+        if(!ret)
+          R16_I2C_DATAR = R16_I2C_OADDR1 & 0xff; // i2c rd addr
+          ret = i2c_wait_status(RB_I2C_ADDR);
+      }
+    }
+    while((!ret) && rdlen--) {
+      if(rdlen == 1 && (tr->rdlen & 0x80) == 0)
+        // NACK
+        R16_I2C_CTRL1 &= ~RB_I2C_ACK;
+      else {
+        R16_I2C_CTRL1 |= RB_I2C_ACK;
+      }
+      ret = i2c_wait_status(RB_I2C_RxNE);
+      if(!ret) {
+        *poutdata++ = R16_I2C_DATAR;
+        ret = i2c_wait_status(RB_I2C_RxNE);
       }
     }
   }

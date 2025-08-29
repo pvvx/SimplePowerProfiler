@@ -9,7 +9,6 @@
 #if (USE_I2C_DEV)
 #include "app_drv_fifo.h"
 #include "app_usb.h"
-#include "cmd_cfg.h"
 #include "i2c_dev.h"
 #include "crc16.h"
 
@@ -305,7 +304,7 @@ int I2CDevStart(void) {
       sleep_us(t_rd_us);
       //i2c_printf("I2C: Sleep %u us\r\n", t_rd_us + 512);
 #if USE_I2C_24BIT
-      if(i2c_dev.i2c_rd_24bit == 2) {
+      if(i2c_dev.i2c_rd_24bit > 1) {
         sleep_us(t_rd_us);
       }
 #endif
