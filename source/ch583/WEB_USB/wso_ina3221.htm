@@ -386,7 +386,7 @@ function RendChart(){
 	var x1w = x1u*x1i;
 	var x2w = x2u*x2i;
 	$("ts3").innerHTML = formatW_uW(x1w); // mA * mV -> uW
-	$("ts23").innerHTML = formatW_uW(x1w); // mA * mV -> uW
+	$("ts23").innerHTML = formatW_uW(x2w); // mA * mV -> uW
 	// %
 	$("ts5").innerHTML = formatP(x1w, x2w);
 	$("ts25").innerHTML =formatP(x2w, x1w);
