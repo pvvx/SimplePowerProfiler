@@ -115,7 +115,7 @@ AutoIncBuild=0
 MajorVer=0
 MinorVer=1
 Release=2
-Build=7
+Build=8
 Debug=0
 PreRelease=0
 Special=0
@@ -126,13 +126,13 @@ CodePage=1251
 [Version Info Keys]
 CompanyName=PapuaSoft & PapuaHard
 FileDescription=
-FileVersion=0.1.2.7
+FileVersion=0.1.2.8
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=PowerProfiler
-ProductVersion=0.1.2.7
+ProductVersion=0.1.2.8
 Comments=Test only
 [Excluded Packages]
 c:\program files (x86)\borland\delphi7\Bin\dcltee70.bpl=TeeChart Components

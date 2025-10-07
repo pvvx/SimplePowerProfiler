@@ -1206,14 +1206,14 @@ begin
         for i:=0 to data_cont -1  do begin
           if (ChartEnables and 1) <> 0 then begin
             try
-             x := Chart.Series[CHART_U_NUM].YValue[i];
+             x := Chart.Series[CHART_I_NUM].YValue[i];
             except
              x := 0;
             end;
           end else x := 0;
           if (ChartEnables and 2) <> 0 then begin
             try
-             y:=Chart.Series[CHART_I_NUM].YValue[i];
+             y:=Chart.Series[CHART_U_NUM].YValue[i];
             except
              y := -4096;
             end;
