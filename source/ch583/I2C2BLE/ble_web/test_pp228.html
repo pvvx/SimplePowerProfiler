@@ -157,8 +157,8 @@ function ShowGrf(len, value) {
 	if(rend) {
 		if(value.getUint8(1) == 0x3A) {
 			for (let i=0;i<len;i+=6) {
-				datau.push([cur_idx/smprate, ((value.getInt8(i+4) << 16) | value.getUint16(i+2,true))*kBus+zBus]);
-				datai.push([cur_idx/smprate+0.5/smprate, ((value.getUint8(i+7) << 16) | value.getUint16(i+5,true))*kShunt+zShunt]);
+				datau.push([cur_idx/smprate, ((value.getUint8(i+4) << 16) | value.getUint16(i+2,true))*kBus+zBus]);
+				datai.push([cur_idx/smprate+0.5/smprate, ((value.getInt8(i+7) << 16) | value.getUint16(i+5,true))*kShunt+zShunt]);
 				cur_idx++;
 				if(cur_idx >= samples) {
 					datau.shift();
