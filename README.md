@@ -20,6 +20,11 @@ Simple PowerProfiler on INA219, INA226, INA231, INA3221
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/PowerProfiler.gif)
 
+* CH582F WEB-USB:
+
+![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/ch582F_ina228_web_usb.jpg)
+
+
 [Source code](https://github.com/pvvx/SimplePowerProfiler/tree/main/source)
 
 [Source code for TLSR8266](https://github.com/pvvx/UBIA)
