@@ -21,7 +21,7 @@
 #define DAC_DMA_ENABLE  0
 #define TESTS_DAC_STEP_ADC  0
 
-#define I2C_DEV_POWER GPIO_Pin_23 // PortB
+#define I2C_DEV_POWER GPIO_Pin_13 // PortB
 #define I2C_DEV_SDA   GPIO_Pin_14 // PortB
 #define I2C_DEV_SCL   GPIO_Pin_15 // PortB
 //#define GPIO_TEST     GPIO_Pin_7 // PortB

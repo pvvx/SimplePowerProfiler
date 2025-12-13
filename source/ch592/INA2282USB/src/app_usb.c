@@ -192,7 +192,7 @@ const uint8_t MyCfgDescr[] = {
 };
 const uint8_t MyLangDescr[] = { 0x04, 0x03, 0x09, 0x04 };
 const uint8_t MyManuInfo[] = { 0x0E, 0x03, 'w', 0, 'c', 0, 'h', 0, '.', 0, 'c', 0, 'n', 0 };
-const uint8_t MyProdInfo[] = { 0x0C, 0x03, 'C', 0, 'H', 0, '5', 0, '8', 0, 'x', 0 };
+const uint8_t MyProdInfo[] = { 0x0C, 0x03, 'C', 0, 'H', 0, '5', 0, '9', 0, '2', 0 };
 #if USE_MAC_SER
 uint8_t MySerInfo[] = { 0x0E, 0x03, '1', 0, '2', 0, '3', 0, '4', 0, '5', 0, '6', 0 };
 #else
