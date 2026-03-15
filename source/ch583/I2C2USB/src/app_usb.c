@@ -296,12 +296,15 @@ void app_usb_init()
  *
  * @return  none
  */
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 void DevEP1_OUT_Deal( uint8_t l )
 { /* User customizable */
 #if USE_I2C_DEV
     if(app_cmd_len == 0 && l) {
-        if(l > sizeoff(app_cmd_buf))
-            app_cmd_len = sizeoff(app_cmd_buf);
+        if(l > sizeof(app_cmd_buf))
+            app_cmd_len = sizeof(app_cmd_buf);
         else
             app_cmd_len = l;
         memcpy(app_cmd_buf, EP1_Databuf, app_cmd_len);

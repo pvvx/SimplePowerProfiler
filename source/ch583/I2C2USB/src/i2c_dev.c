@@ -318,6 +318,9 @@ int I2CDevStart(void) {
 	return 1; // ok
 }
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 void I2CDevTask(void) {
 	uint32_t prd = i2c_dev.i2c_buf_rd;
 	uint32_t pwr = i2c_dev.i2c_buf_wr;
@@ -328,7 +331,6 @@ void I2CDevTask(void) {
 	if(pwr < prd) {
 		size = I2C_BUF_SIZE - prd + pwr;
 		if(size >= cfg_i2c.pktcnt) {
-			i2c_blk.count = cfg_i2c.pktcnt + cfg_i2c.pktcnt + cfg_i2c.pktcnt;
 			size = cfg_i2c.pktcnt;
 #if USE_I2C_24BIT
       if(i2c_dev.i2c_rd_24bit) {
@@ -405,7 +407,9 @@ void I2CDevTask(void) {
   if(app_drv_fifo_write(&app_tx_fifo, (uint8_t *)&i2c_blk, (uint16_t *)&size) == APP_DRV_FIFO_RESULT_SUCCESS) {
     status.all_read_count++;
 	} else {
+#if !USE_RAM_CODE
 	  PRINT("I2C: buffer overflow!\r\n");
+#endif
 	  status.all_overflow_cnt++;
 	}
 }

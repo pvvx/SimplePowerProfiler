@@ -10,6 +10,8 @@
 
 #include "CH58x_common.h"
 
+#define USE_RAM_CODE  1
+
 #define USE_I2C_DEV   1
 #define USE_USB_CDC   1
 //#define USE_ADC_DEV   0 // TODO

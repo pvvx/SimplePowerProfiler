@@ -6,6 +6,9 @@
 #if (USE_I2C_DEV)
 #include "i2c_dev.h"
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 uint32_t i2c_wait_status(uint32_t mask) {
   uint32_t ret = -1; // timeout
   uint32_t tt = GetSysTickCnt(); // (uint32_t)SysTick->CNT;
@@ -60,6 +63,9 @@ int I2CBusWriteWord(unsigned char i2c_addr, unsigned char reg_addr, unsigned sho
   return ret;
 }
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 int I2CBusReadWord(unsigned char i2c_addr, unsigned char reg_addr, void *preg_data)
 {
   int ret = -1;
@@ -101,6 +107,9 @@ int I2CBusReadWord(unsigned char i2c_addr, unsigned char reg_addr, void *preg_da
 	return ret;
 }
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 int I2CBusRead24bits(unsigned char i2c_addr, unsigned char reg_addr, void *preg_data)
 {
   int ret = -1;

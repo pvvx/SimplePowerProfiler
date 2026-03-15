@@ -30,7 +30,7 @@ const uint16_t tab_freg[8] = {
 // Sample time:    50,  84, 150, 280,  540, 1052  2074  4120 us
 // RDY 2 channel: 188, 248, 379, 640, 1160, 1400, 2431, 8326 us
 const uint16_t tab_time_us[8] = {
-    100, // 50 us not work!
+    50, // 50 us not work!
     84,
     150,
     280,

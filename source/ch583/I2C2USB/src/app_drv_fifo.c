@@ -71,6 +71,9 @@ bool app_drv_fifo_is_full(app_drv_fifo_t *fifo)
     return (fifo_length(fifo) == fifo->size);
 }
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 app_drv_fifo_result_t
 app_drv_fifo_write(app_drv_fifo_t *fifo, uint8_t *data, uint16_t *p_write_length)
 {
@@ -141,6 +144,9 @@ app_drv_fifo_write_from_same_addr(app_drv_fifo_t *fifo, uint8_t *data, uint16_t 
     return APP_DRV_FIFO_RESULT_SUCCESS;
 }
 
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 app_drv_fifo_result_t
 app_drv_fifo_read(app_drv_fifo_t *fifo, uint8_t *data, uint16_t *p_read_length)
 {

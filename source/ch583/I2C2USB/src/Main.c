@@ -19,6 +19,9 @@ uint8_t app_tx_buffer[APP_TX_BUFFER_LENGTH];
  *
  * @return  data send
  */
+#if USE_RAM_CODE
+__HIGH_CODE
+#endif
 int USBSendData(void)
 {
     if((R8_UEP1_CTRL & MASK_UEP_T_RES) == UEP_T_RES_ACK) {
@@ -54,7 +57,38 @@ void DebugInit( void )
   GPIOA_ModeCfg( GPIO_Pin_9, GPIO_ModeOut_PP_5mA );
   UART1_DefInit();
 }
-
+#if USE_RAM_CODE
+/*********************************************************************
+ * @fn      Main_Circulation
+ *
+ * @brief   Ö÷Ñ­»·
+ *
+ * @return  none
+ */
+__HIGH_CODE
+__attribute__((noinline))
+void Main_Circulation(void)
+{
+  while(1)
+  {
+    if(app_cmd_len) {
+      if(app_cmd_len > 1) {
+        int len = cmd_decode(&send_pkt, (blk_rx_pkt_t *)app_cmd_buf, app_cmd_len);
+        if(len) {
+          if(app_drv_fifo_write(&app_tx_fifo, (uint8_t *)&send_pkt, (uint16_t *)&len) != APP_DRV_FIFO_RESULT_SUCCESS) {
+            PRINT("CMD: Out buffer overflow!\r\n");
+          }
+        }
+      }
+      app_cmd_len = 0;
+    };
+#if USE_I2C_DEV
+    I2CDevTask();
+#endif
+    USBSendData();
+  }
+}
+#endif
 
 int main()
 {
@@ -76,6 +110,9 @@ int main()
   I2CDevInit();
 #endif
   app_usb_init();
+#if USE_RAM_CODE
+  Main_Circulation();
+#else
   while(1)
   {
     if(app_cmd_len) {
@@ -107,6 +144,7 @@ int main()
     }
 #endif
   }
+#endif // USE_RAM_CODE
 }
 
 
