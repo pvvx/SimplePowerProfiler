@@ -17,13 +17,13 @@ Simple PowerProfiler on INA219, INA226, INA228, INA229, INA231, INA3221
 
 ---
 
-## BL702 supports INA228/INA229 (20 bits) up to 20 ksps (I2C CLK up 2 MHz).
+## BL702 supports INA228/INA229 (20 bits) up to 20 ksps ((This is the maximum for INA228).
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/xt_zb1_devkit.jpg)
 
 ---
 
-## CH582F/CH592F supports INA226, INA231, INA3221 and INA228 (20 bits) up to 11 ksps (I2C CLK up 1.5 MHz).
+## CH582F/CH592F supports INA226, INA231, INA3221 and INA228 (20 bits) up to 20 ksps (This is the maximum for INA228).
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/CH582.gif) ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/CH592.gif)
 
