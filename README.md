@@ -31,6 +31,10 @@ Simple PowerProfiler on INA219, INA226, INA228, INA229, INA231, INA3221
 
 ![SCH](https://raw.githubusercontent.com/pvvx/SimplePowerProfiler/main/docs/ch582F_ina228_web_usb.jpg)
 
+1206 10uF 35V X7R Capacitor Leakage Test at 4V:
+
+<img width="722" height="1186" alt="image" src="https://github.com/user-attachments/assets/b0a59365-5575-4679-8c35-78cedd5e0164" />
+
 ### USB (CH5x2F)
 
 [wso_ina226.htm](https://pvvx.github.io/SPP/usb_web/wso_ina226.htm)
