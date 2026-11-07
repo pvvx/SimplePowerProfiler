@@ -64,6 +64,8 @@ pip install pyserial pyjls pyqtgraph numpy
 6. **Запись:** Нажмите **▶ Старт**. Для остановки нажмите **■ Стоп**.
 7. **Анализ:** Если включена опция *"Автооткрытие файла в Waveform"*, записанный `.jls` файл мгновенно откроется в главном окне Joulescope UI для детального изучения.
 
+[joulescope_plugin.gif](https://github.com/pvvx/SimplePowerProfiler/blob/main/docs/joulescope_plugin.gif)
+
 ## 🔧 Устранение неполадок
 
 * **Виджет не появляется в меню Plugins:** 
