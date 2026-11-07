@@ -35,6 +35,16 @@ Simple PowerProfiler on INA219, INA226, INA228, INA229, INA231, INA3221
 
 <img width="722" height="1186" alt="image" src="https://github.com/user-attachments/assets/b0a59365-5575-4679-8c35-78cedd5e0164" />
 
+### pp_ina228_usb
+
+![joulescope_plugin.gif](https://github.com/pvvx/SimplePowerProfiler/blob/main/docs/joulescope_plugin.gif)
+
+[pp_ina228_usb](https://github.com/pvvx/SimplePowerProfiler/tree/main/source/ch592) - это плагин интегрирует кастомный аппаратный модуль INA2282USB в экосистему **Joulescope UI**.
+
+Создан по приколу с помощью бесплатного [чат с AI Qwen](https://chat.qwen.ai/) по принципу “вайб-кодинга” - т.е. не вникая в код создаваемый AI, а путем разговора, прикидываясь ничего не понимающего в коде и программировании.
+
+Полное описание от chat Qwen смотрите в [pp_ina228_usb.md](https://github.com/pvvx/SimplePowerProfiler/blob/main/source/ch592/pp_ina228_usb.md)
+
 ### USB (CH5x2F)
 
 [wso_ina226.htm](https://pvvx.github.io/SPP/usb_web/wso_ina226.htm)
