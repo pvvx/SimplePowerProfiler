@@ -35,7 +35,7 @@ DEFAULT_CONFIG = {
     "sample_rate": 11904.7619,
     "channel_mode": "Current & Voltage",
     "show_graphs": True,             # Показывать ли графики
-    "auto_open_waveform": False      # Автооткрытие в Waveform
+    "auto_open_waveform": True      # Автооткрытие в Waveform
 }
 
 def load_config():
@@ -218,7 +218,7 @@ class SerialWorker(QtCore.QObject):
 
 @register
 @styled_widget(N_('PP-INA228-USB Device'))
-class CustomAdcWidget(QtWidgets.QWidget):
+class PpIna228UsbWidget(QtWidgets.QWidget):
     CAPABILITIES = ['widget@']
 
     def __init__(self, parent=None):
